@@ -1,0 +1,41 @@
+# This file defines the build steps for Google Cloud Build.
+# It builds a Docker image and pushes it to Google Cloud Artifact Registry.
+
+steps:
+  # Step 1: Build the Docker image
+  # The 'gcr.io/cloud-builders/docker' is a pre-built image by Google
+  # that contains the Docker CLI.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Docker Image'
+    args:
+      [
+        'build',
+        '-t',
+        # This is the full tag for the image in Artifact Registry.
+        # Format: <region>-docker.pkg.dev/<project-id>/<repo-name>/<image-name>:<tag>
+        '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_IMAGE_NAME}:$SHORT_SHA',
+        # '.' specifies that the build context is the current directory (the root of your repo).
+        '.',
+      ]
+
+  # Step 2: Push the Docker image to Artifact Registry
+  # This step uses the same Docker builder to push the image created in the previous step.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Docker Image to Artifact Registry'
+    args:
+      [
+        'push',
+        '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_IMAGE_NAME}:$SHORT_SHA',
+      ]
+
+# The 'images' block lists the final images that this build creates.
+# Cloud Build will store these image names in the build's metadata.
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO_NAME}/${_IMAGE_NAME}:$SHORT_SHA'
+
+# 'substitutions' allows you to define variables that you can use in your build steps.
+# You can provide default values here and override them when you run the build trigger.
+substitutions:
+  _REGION: 'us-central1' # The region of your Artifact Registry repository.
+  _AR_REPO_NAME: 'dci-view-api-poc' # The name of your repository in Artifact Registry.
+  _IMAGE_NAME: 'my-app' # The name for your Docker image.
